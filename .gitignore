@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+__pycache__/
+.env
+.env.*
+*.log
+*.mp4
+*.mov
+*.wav
+*.zip
+memory/
+.dreams/
+secrets/
+config/private*
