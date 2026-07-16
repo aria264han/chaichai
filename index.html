@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChaiChai (拆拆) - AIGC 自动化生产闭环</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050608;
+      --bg-soft: #0b0d12;
+      --panel: rgba(16, 19, 28, 0.76);
+      --panel-strong: rgba(22, 26, 38, 0.92);
+      --border: rgba(148, 163, 184, 0.18);
+      --text: #f8fafc;
+      --muted: #a8b3c7;
+      --subtle: #6f7b90;
+      --blue: #46a7ff;
+      --cyan: #5eead4;
+      --violet: #8b5cf6;
+      --rose: #fb7185;
+      --green: #34d399;
+      --shadow: 0 28px 90px rgba(0, 0, 0, 0.48);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(70, 167, 255, 0.18), transparent 28rem),
+        radial-gradient(circle at 82% 3%, rgba(139, 92, 246, 0.16), transparent 30rem),
+        linear-gradient(180deg, #050608 0%, #080a0f 44%, #050608 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 72%);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .container {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 28px 0;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 720;
+      letter-spacing: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border: 1px solid rgba(94, 234, 212, 0.34);
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(70, 167, 255, 0.2), rgba(139, 92, 246, 0.18));
+      box-shadow: 0 0 28px rgba(70, 167, 255, 0.22);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .hero {
+      padding: 64px 0 96px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 22px;
+      padding: 7px 12px;
+      border: 1px solid rgba(70, 167, 255, 0.3);
+      border-radius: 999px;
+      background: rgba(70, 167, 255, 0.08);
+      color: #c9e7ff;
+      font-size: 13px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--cyan);
+      box-shadow: 0 0 16px rgba(94, 234, 212, 0.86);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(48px, 8vw, 104px);
+      line-height: 0.96;
+      letter-spacing: 0;
+      font-weight: 820;
+    }
+
+    .title-gradient {
+      display: inline-block;
+      background: linear-gradient(90deg, #ffffff 6%, #b9dfff 42%, #d9c9ff 72%, #ffffff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .subtitle {
+      width: min(760px, 100%);
+      margin: 26px auto 0;
+      color: #c6d2e4;
+      font-size: clamp(20px, 2.8vw, 32px);
+      line-height: 1.35;
+      font-weight: 560;
+    }
+
+    .hero-copy {
+      width: min(720px, 100%);
+      margin: 18px auto 44px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .video-shell {
+      position: relative;
+      width: min(980px, 100%);
+      margin: 0 auto;
+      border-radius: 22px;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(70, 167, 255, 0.76), rgba(139, 92, 246, 0.5), rgba(94, 234, 212, 0.42));
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.07),
+        0 0 64px rgba(70, 167, 255, 0.22),
+        0 0 110px rgba(139, 92, 246, 0.2),
+        var(--shadow);
+    }
+
+    .video-shell::before {
+      content: "";
+      position: absolute;
+      inset: -26px;
+      z-index: -1;
+      border-radius: 34px;
+      background: linear-gradient(90deg, rgba(70, 167, 255, 0.28), rgba(139, 92, 246, 0.26), rgba(94, 234, 212, 0.2));
+      filter: blur(34px);
+      opacity: 0.78;
+    }
+
+    .video-frame {
+      overflow: hidden;
+      border-radius: 21px;
+      background: #020305;
+      aspect-ratio: 16 / 9;
+    }
+
+    video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #020305;
+    }
+
+    .section {
+      padding: 92px 0;
+    }
+
+    .section-heading {
+      width: min(720px, 100%);
+      margin-bottom: 38px;
+    }
+
+    .section-kicker {
+      margin: 0 0 10px;
+      color: var(--cyan);
+      font-size: 13px;
+      font-weight: 760;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: 0;
+      color: var(--text);
+      font-size: clamp(32px, 5vw, 56px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .section-desc {
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      min-height: 280px;
+      padding: 26px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)),
+        var(--panel);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: auto -40px -64px auto;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(70, 167, 255, 0.2), transparent 68%);
+      pointer-events: none;
+    }
+
+    .icon {
+      display: grid;
+      width: 54px;
+      height: 54px;
+      place-items: center;
+      margin-bottom: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.055);
+      font-size: 26px;
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 22px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15.5px;
+    }
+
+    .card-tag {
+      display: inline-flex;
+      margin-top: 24px;
+      padding: 6px 10px;
+      border: 1px solid rgba(94, 234, 212, 0.22);
+      border-radius: 999px;
+      color: #b9fff3;
+      background: rgba(94, 234, 212, 0.07);
+      font-size: 12px;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .compare-panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-strong);
+      padding: 28px;
+    }
+
+    .compare-panel.before {
+      border-color: rgba(251, 113, 133, 0.2);
+      background: linear-gradient(180deg, rgba(251, 113, 133, 0.08), rgba(16, 19, 28, 0.78));
+    }
+
+    .compare-panel.after {
+      border-color: rgba(52, 211, 153, 0.22);
+      background: linear-gradient(180deg, rgba(52, 211, 153, 0.09), rgba(16, 19, 28, 0.78));
+    }
+
+    .compare-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .compare-label h3 {
+      margin: 0;
+      font-size: 25px;
+      letter-spacing: 0;
+    }
+
+    .pill {
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .before .pill {
+      color: #ffd1d8;
+      background: rgba(251, 113, 133, 0.14);
+    }
+
+    .after .pill {
+      color: #c9ffea;
+      background: rgba(52, 211, 153, 0.13);
+    }
+
+    .compare-list {
+      display: grid;
+      gap: 14px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+    }
+
+    .compare-list li {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .before .marker {
+      color: var(--rose);
+    }
+
+    .after .marker {
+      color: var(--green);
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1;
+    }
+
+    .metric span {
+      color: var(--subtle);
+      font-size: 13px;
+    }
+
+    .cta {
+      padding: 104px 0 120px;
+      text-align: center;
+    }
+
+    .cta-inner {
+      width: min(780px, 100%);
+      margin: 0 auto;
+    }
+
+    .cta h2 {
+      margin-bottom: 18px;
+    }
+
+    .cta p {
+      margin: 0 auto 34px;
+      width: min(620px, 100%);
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .cta-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 58px;
+      padding: 0 28px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f8fafc, #b9dfff);
+      color: #050608;
+      font-size: 16px;
+      font-weight: 800;
+      box-shadow: 0 18px 54px rgba(70, 167, 255, 0.28);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 24px 70px rgba(139, 92, 246, 0.32);
+    }
+
+    footer {
+      padding: 24px 0 38px;
+      color: var(--subtle);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      .nav {
+        padding: 22px 0;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding: 48px 0 72px;
+      }
+
+      .feature-grid,
+      .comparison,
+      .metric-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        min-height: auto;
+      }
+
+      .section {
+        padding: 70px 0;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .container {
+        width: min(100% - 28px, 1120px);
+      }
+
+      .hero-copy {
+        margin-bottom: 34px;
+        font-size: 15.5px;
+      }
+
+      .video-shell {
+        border-radius: 16px;
+      }
+
+      .video-shell::before {
+        inset: -14px;
+        filter: blur(24px);
+      }
+
+      .video-frame {
+        border-radius: 15px;
+      }
+
+      .card,
+      .compare-panel {
+        padding: 22px;
+      }
+
+      .compare-label {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .cta {
+        padding: 78px 0 88px;
+      }
+
+      .cta-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="container nav" aria-label="顶部导航">
+      <a class="brand" href="#" aria-label="ChaiChai 首页">
+        <span class="brand-mark">拆</span>
+        <span>ChaiChai</span>
+      </a>
+      <nav class="nav-links" aria-label="页面导航">
+        <a href="#workflow">Workflow</a>
+        <a href="#impact">Impact</a>
+        <a href="#github">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="container hero">
+        <div class="eyebrow"><span class="status-dot"></span> Built on Open Claw for automated AIGC workflows</div>
+        <h1><span class="title-gradient">ChaiChai (拆拆)</span></h1>
+        <p class="subtitle">构建下一代 AIGC 自动化生产闭环</p>
+        <p class="hero-copy">从创意、脚本、素材到最终视频导出，ChaiChai 将多智能体协作、长期记忆和自动化执行连接成一条连续生产线。</p>
+
+        <div class="video-shell" aria-label="ChaiChai demo 视频">
+          <div class="video-frame">
+            <video src="demo.mp4" controls autoplay muted loop playsinline preload="metadata"></video>
+          </div>
+        </div>
+      </section>
+
+      <section class="container section" id="workflow">
+        <div class="section-heading">
+          <p class="section-kicker">Core Architecture</p>
+          <h2>让 AIGC 视频生产从离散工具变成连续系统</h2>
+          <p class="section-desc">ChaiChai 面向真实视频工作流设计，把角色协作、上下文记忆和自动导出整合在同一个自动化闭环中。</p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="card">
+            <div class="icon" aria-hidden="true">✦</div>
+            <h3>Multi-Agent Orchestration</h3>
+            <p>协同编剧、策划、素材整理与执行等多个 AI 角色，让任务在明确分工中自动推进。</p>
+            <span class="card-tag">多智能体编排</span>
+          </article>
+
+          <article class="card">
+            <div class="icon" aria-hidden="true">◈</div>
+            <h3>Memory System</h3>
+            <p>跨步骤保存关键上下文，减少重复解释，让脚本、素材与导出策略保持一致。</p>
+            <span class="card-tag">记忆增强</span>
+          </article>
+
+          <article class="card">
+            <div class="icon" aria-hidden="true">↻</div>
+            <h3>Automated Video Loop</h3>
+            <p>将创意生成、素材生产、流程执行和最终视频导出串联为可重复运行的自动化闭环。</p>
+            <span class="card-tag">自动化闭环</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="container section" id="impact">
+        <div class="section-heading">
+          <p class="section-kicker">Before vs After</p>
+          <h2>拆掉流程断点，把人工干预留给真正重要的判断</h2>
+          <p class="section-desc">传统 AIGC 视频生产常被工具切换、上下文丢失和手动衔接拖慢。ChaiChai 让智能体带着记忆协同执行，生产效率自然被拉起来。</p>
+        </div>
+
+        <div class="comparison">
+          <article class="compare-panel before">
+            <div class="compare-label">
+              <h3>Before</h3>
+              <span class="pill">Fragmented</span>
+            </div>
+            <ul class="compare-list">
+              <li><span class="marker">×</span><span>脚本、素材、剪辑和导出分散在不同工具中，流程容易断裂。</span></li>
+              <li><span class="marker">×</span><span>智能体缺少长期记忆，跨步骤上下文需要反复人工补充。</span></li>
+              <li><span class="marker">×</span><span>每个环节都需要人工接力，规模化生产成本持续上升。</span></li>
+            </ul>
+          </article>
+
+          <article class="compare-panel after">
+            <div class="compare-label">
+              <h3>After ChaiChai</h3>
+              <span class="pill">Autonomous</span>
+            </div>
+            <ul class="compare-list">
+              <li><span class="marker">✓</span><span>多智能体在统一工作流中协作，从创意到素材持续推进。</span></li>
+              <li><span class="marker">✓</span><span>记忆系统贯穿生产链路，保持角色意图、素材线索和输出目标一致。</span></li>
+              <li><span class="marker">✓</span><span>自动化闭环完成视频导出，把人从重复衔接中释放出来。</span></li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="metric-strip" aria-label="效率指标">
+          <div class="metric">
+            <strong>3×</strong>
+            <span>核心生产环节统一编排</span>
+          </div>
+          <div class="metric">
+            <strong>0</strong>
+            <span>跨步骤上下文断层</span>
+          </div>
+          <div class="metric">
+            <strong>24/7</strong>
+            <span>自动化工作流持续运行</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="container cta" id="github">
+        <div class="cta-inner">
+          <p class="section-kicker">Open Source</p>
+          <h2>把 AIGC 视频生产交给可扩展的自动化系统</h2>
+          <p>ChaiChai 基于 Open Claw，让每一次创意都能沿着清晰、可记忆、可复用的智能体工作流向前推进。</p>
+          <a class="cta-button" href="https://github.com/aria264han/openclaw" target="_blank" rel="noreferrer">Star on GitHub</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="container">
+      ChaiChai (拆拆) · AIGC automated production loop
+    </footer>
+  </div>
+</body>
+</html>
